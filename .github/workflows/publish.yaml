@@ -51,6 +51,7 @@ jobs:
   upload-registries:
     needs: [read-config]
     if: |
+      github.event.workflow_run.conclusion == 'success' &&
       needs.read-config.outputs.upload-matrix != '{"include": []}'
     strategy:
       matrix: ${{ fromJSON(needs.read-config.outputs.upload-matrix) }}
