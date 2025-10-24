@@ -64,13 +64,15 @@ jobs:
       matrix: ${{ fromJSON(needs.read-config.outputs.build-matrix) }}
     uses: canonical/oci-factory-internal/.github/workflows/Build-Rock.yaml@c3de96b5327d617c40f8ce29a53306cd5ee5aa6e
     with:
+      pro-services: ${{ matrix.pro-services }}
       rock-repo: ${{ github.repository }}
       rock-repo-commit: ${{ github.ref }}
       rockfile-directory: ${{ matrix.directory }}
       oci-archive-name: ${{ matrix.artifact-name }}
       arch-map: ${{ needs.get-runners.outputs.arch-map }}
+      rockcraft-test: ${{ matrix.run-tests }}
     secrets:
-      host-github-token: ${{ secrets.GITHUB_TOKEN }}
+      pro-token: ${{ secrets.UBUNTU_PRO_TOKEN }}
       source-github-token: ${{ secrets.REPO_CLONER_TOKEN }}
 
   build:
