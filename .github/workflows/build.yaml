@@ -57,7 +57,7 @@ jobs:
   #   - to call an internal action, the repo must also be internal/private
   #     - but the OCI Factory is not internal/private, so that internal action cannot be called from there
   build-internal:
-    needs: [get-runners, read-config]
+    needs: [get-runners, read-config, check-pro-rocks]
     if: github.event.repository.visibility != 'public'
     strategy:
       fail-fast: true
@@ -76,7 +76,7 @@ jobs:
       source-github-token: ${{ secrets.REPO_CLONER_TOKEN }}
 
   build:
-    needs: [get-runners, read-config]
+    needs: [get-runners, read-config, check-pro-rocks]
     if: github.event.repository.visibility == 'public'
     strategy:
       matrix: ${{ fromJSON(needs.read-config.outputs.build-matrix) }}
