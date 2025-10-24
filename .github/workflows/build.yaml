@@ -21,7 +21,7 @@ jobs:
 
       - name: Read .github/ci.yaml
         id: read-ci-config
-        uses: canonical/rocks-template-actions/actions/read-ci-config@4c02e00c3097551b7e5735619185f8b1e179f4f1
+        uses: canonical/rocks-template-actions/actions/read-ci-config@5c472bd27b40d5da5022b4ae0de28101b809e9da
 
   get-runners:
     runs-on: ubuntu-latest
@@ -35,6 +35,27 @@ jobs:
           else
             echo 'arch-map={"amd64":["ubuntu-24.04"],"arm64":["ubuntu-24.04-arm"]}' >> $GITHUB_OUTPUT
           fi
+
+  # Why do we need this duplicate job and reusable Build-Rock workflow?
+  # - the Build-Rock wf may need an an environment setup that relies on an internal action
+  #   - to call an internal action, the repo must also be internal/private
+  #     - but the OCI Factory is not internal/private, so that internal action cannot be called from there
+  build-internal:
+    needs: [get-runners, read-config]
+    if: github.event.repository.visibility != 'public'
+    strategy:
+      fail-fast: true
+      matrix: ${{ fromJSON(needs.read-config.outputs.build-matrix) }}
+    uses: canonical/oci-factory-internal/.github/workflows/Build-Rock.yaml@c3de96b5327d617c40f8ce29a53306cd5ee5aa6e
+    with:
+      rock-repo: ${{ github.repository }}
+      rock-repo-commit: ${{ github.ref }}
+      rockfile-directory: ${{ matrix.directory }}
+      oci-archive-name: ${{ matrix.artifact-name }}
+      arch-map: ${{ needs.get-runners.outputs.arch-map }}
+    secrets:
+      host-github-token: ${{ secrets.GITHUB_TOKEN }}
+      source-github-token: ${{ secrets.REPO_CLONER_TOKEN }}
 
   build:
     needs: [get-runners, read-config]
@@ -54,7 +75,11 @@ jobs:
       pro-token: ${{ secrets.UBUNTU_PRO_TOKEN }}
 
   test:
-    needs: [read-config, build]
+    needs: [read-config, build, build-internal]
+    if: |
+      always() && needs.read-config.result == 'success' &&
+      (needs.build-internal.result == 'success' && needs.build.result == 'skipped') ||
+      (needs.build-internal.result == 'skipped' && needs.build.result == 'success')
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.read-config.outputs.build-matrix) }}
