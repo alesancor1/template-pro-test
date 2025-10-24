@@ -35,6 +35,22 @@ jobs:
           else
             echo 'arch-map={"amd64":["ubuntu-24.04"],"arm64":["ubuntu-24.04-arm"]}' >> $GITHUB_OUTPUT
           fi
+  
+  check-pro-rocks:
+    needs: read-config
+    runs-on: ubuntu-latest
+    if: github.event.repository.visibility == 'public'
+    steps:
+      - name: Check for Pro rocks in matrix
+        run: |
+          matrix='${{ needs.read-config.outputs.build-matrix }}'
+
+          # Use jq to check if any 'pro-services' array is non-empty
+          has_pro=$(echo "$matrix" | jq '[.include[] | select(.["pro-services"] != null and (.["pro-services"] | length > 0))] | length')
+
+          if [ "$has_pro" -gt 0 ]; then
+            echo "::error::This repository is public but defines one or more pro-enabled rocks."
+          fi
 
   # Why do we need this duplicate job and reusable Build-Rock workflow?
   # - the Build-Rock wf may need an an environment setup that relies on an internal action
